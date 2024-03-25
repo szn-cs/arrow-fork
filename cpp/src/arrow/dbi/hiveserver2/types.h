@@ -107,7 +107,7 @@ class ColumnDesc {
   ColumnDesc(const std::string& column_name, std::unique_ptr<ColumnType> type,
              int position, const std::string& comment)
       : column_name_(column_name),
-        type_(move(type)),
+        type_(std::move(type)),
         position_(position),
         comment_(comment) {}
 

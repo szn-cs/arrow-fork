@@ -228,7 +228,7 @@ Status Engine::LoadPreCompiledIR() {
 
   /// Parse the IR module.
   llvm::Expected<std::unique_ptr<llvm::Module>> module_or_error =
-      llvm::getOwningLazyBitcodeModule(move(buffer), *context());
+      llvm::getOwningLazyBitcodeModule(std::move(buffer), *context());
   if (!module_or_error) {
     // NOTE: llvm::handleAllErrors() fails linking with RTTI-disabled LLVM builds
     // (ARROW-5148)
