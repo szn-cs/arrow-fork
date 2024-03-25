@@ -76,6 +76,8 @@
 #include "gandiva/decimal_ir.h"
 #include "gandiva/exported_funcs_registry.h"
 
+using namespace std;
+
 namespace gandiva {
 
 extern const unsigned char kPrecompiledBitcode[];
