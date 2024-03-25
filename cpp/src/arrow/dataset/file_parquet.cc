@@ -759,7 +759,8 @@ Result<util::optional<int64_t>> ParquetFileFragment::TryCountRows(
   DCHECK_NE(metadata_, nullptr);
   if (ExpressionHasFieldRefs(predicate)) {
 #if defined(__GNUC__) && (__GNUC__ < 5)
-    // ARROW-12694: with GCC 4.9 (RTools 35) we sometimes segfault here if we move(result)
+    // ARROW-12694: with GCC 4.9 (RTools 35) we sometimes segfault here if we
+    // std::move(result)
     auto result = TestRowGroups(std::move(predicate));
     if (!result.ok()) {
       return result.status();

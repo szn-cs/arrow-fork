@@ -224,7 +224,7 @@ Status Engine::LoadPreCompiledIR() {
                   Status::CodeGenError("Could not load module from IR: ",
                                        buffer_or_error.getError().message()));
 
-  std::unique_ptr<llvm::MemoryBuffer> buffer = move(buffer_or_error.get());
+  std::unique_ptr<llvm::MemoryBuffer> buffer = std::move(buffer_or_error.get());
 
   /// Parse the IR module.
   llvm::Expected<std::unique_ptr<llvm::Module>> module_or_error =
@@ -237,14 +237,14 @@ Status Engine::LoadPreCompiledIR() {
     stream << module_or_error.takeError();
     return Status::CodeGenError(stream.str());
   }
-  std::unique_ptr<llvm::Module> ir_module = move(module_or_error.get());
+  std::unique_ptr<llvm::Module> ir_module = std::move(module_or_error.get());
 
   // set dataLayout
   SetDataLayout(ir_module.get());
 
   ARROW_RETURN_IF(llvm::verifyModule(*ir_module, &llvm::errs()),
                   Status::CodeGenError("verify of IR Module failed"));
-  ARROW_RETURN_IF(llvm::Linker::linkModules(*module_, move(ir_module)),
+  ARROW_RETURN_IF(llvm::Linker::linkModules(*module_, std::move(ir_module)),
                   Status::CodeGenError("failed to link IR Modules"));
 
   return Status::OK();
