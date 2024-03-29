@@ -214,6 +214,9 @@ class ARROW_EXPORT ProxyMemoryPool : public MemoryPool {
 /// \brief Return a process-wide memory pool based on the system allocator.
 ARROW_EXPORT MemoryPool* system_memory_pool();
 
+/// \brief Directing allocations from a pre-allocated memory.
+ARROW_EXPORT MemoryPool* prealloc_memory_pool();
+
 /// \brief Return a process-wide memory pool based on jemalloc.
 ///
 /// May return NotImplemented if jemalloc is not available.
