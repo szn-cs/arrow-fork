@@ -407,7 +407,6 @@ class PreallocAllocator {
     }
     std::cout << "Allocated from PreallocAllocator: size = " << size << ", alignment = " << alignment << std::endl;
     
-#endif
     return Status::OK();
   }
 
