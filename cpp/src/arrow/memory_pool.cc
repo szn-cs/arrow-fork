@@ -291,7 +291,7 @@ class PreallocAllocator {
     if (result == EINVAL) {
       return Status::Invalid("invalid alignment parameter: ", kAlignment);
     }
-    std::cout << "Allocated from PreallocAllocator: size = " << size << ", alignment = " << alignment << std::endl;
+    std::cout << "Allocated from PreallocAllocator: size = " << size << ", alignment = " << kAlignment << std::endl;
 
     return Status::OK();
   }
@@ -317,7 +317,7 @@ class PreallocAllocator {
     memcpy(out, *ptr, static_cast<size_t>(std::min(new_size, old_size)));
     std::cout << "Reallocated from PreallocAllocator: old_size = " << old_size 
       << ", new_size = " << new_size 
-      << ", alignment = " << alignment << std::endl;
+      << ", alignment = " << kAlignment << std::endl;
 
     free(*ptr);
     *ptr = out;
