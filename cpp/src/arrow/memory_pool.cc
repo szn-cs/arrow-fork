@@ -272,6 +272,75 @@ class SystemAllocator {
   }
 };
 
+// Directing allocations from a pre-allocated memory.
+class PreallocAllocator {
+ public:
+  // Allocate memory according to the alignment requirements for Arrow
+  // (as of May 2016 64 bytes)
+  static Status AllocateAligned(int64_t size, uint8_t** out) {
+    if (size == 0) {
+      *out = zero_size_area;
+      return Status::OK();
+    }
+    const int result = posix_memalign(reinterpret_cast<void**>(out), kAlignment,
+                                      static_cast<size_t>(size));
+    if (result == ENOMEM) {
+      return Status::OutOfMemory("malloc of size ", size, " failed");
+    }
+
+    if (result == EINVAL) {
+      return Status::Invalid("invalid alignment parameter: ", kAlignment);
+    }
+    std::cout << "Allocated from PreallocAllocator: size = " << size << ", alignment = " << kAlignment << std::endl;
+
+    return Status::OK();
+  }
+
+  static Status ReallocateAligned(int64_t old_size, int64_t new_size, uint8_t** ptr) {
+    uint8_t* previous_ptr = *ptr;
+    if (previous_ptr == zero_size_area) {
+      DCHECK_EQ(old_size, 0);
+      return AllocateAligned(new_size, ptr);
+    }
+    if (new_size == 0) {
+      DeallocateAligned(previous_ptr, old_size);
+      *ptr = zero_size_area;
+      return Status::OK();
+    }
+    // Note: We cannot use realloc() here as it doesn't guarantee alignment.
+
+    // Allocate new chunk
+    uint8_t* out = nullptr;
+    RETURN_NOT_OK(AllocateAligned(new_size, &out));
+    DCHECK(out);
+    // Copy contents and release old memory chunk
+    memcpy(out, *ptr, static_cast<size_t>(std::min(new_size, old_size)));
+    std::cout << "Reallocated from PreallocAllocator: old_size = " << old_size 
+      << ", new_size = " << new_size 
+      << ", alignment = " << kAlignment << std::endl;
+
+    free(*ptr);
+    *ptr = out;
+    return Status::OK();
+  }
+
+  static void DeallocateAligned(uint8_t* ptr, int64_t size) {
+    if (ptr == zero_size_area) {
+      DCHECK_EQ(size, 0);
+    } else {
+      free(ptr);
+    }
+  }
+
+  static void ReleaseUnused() {
+#ifdef __GLIBC__
+    // The return value of malloc_trim is not an error but to inform
+    // you if memory was actually released or not, which we do not care about here
+    ARROW_UNUSED(malloc_trim(0));
+#endif
+  }
+};
+
 #ifdef ARROW_JEMALLOC
 
 // Helper class directing allocations to the jemalloc allocator.
@@ -466,6 +535,11 @@ class SystemMemoryPool : public BaseMemoryPoolImpl<SystemAllocator> {
   std::string backend_name() const override { return "system"; }
 };
 
+class PreallocMemoryPool : public BaseMemoryPoolImpl<PreallocAllocator> {
+ public:
+  std::string backend_name() const override { return "prealloc"; }
+};
+
 #ifdef ARROW_JEMALLOC
 class JemallocMemoryPool : public BaseMemoryPoolImpl<JemallocAllocator> {
  public:
@@ -507,6 +581,7 @@ static struct GlobalState {
   std::atomic<bool> finalizing{false};  // constructed first, destroyed last
 
   SystemMemoryPool system_pool;
+  PreallocMemoryPool prealloc_pool_;
 #ifdef ARROW_JEMALLOC
   JemallocMemoryPool jemalloc_pool;
 #endif
@@ -516,6 +591,7 @@ static struct GlobalState {
 } global_state;
 
 MemoryPool* system_memory_pool() { return &global_state.system_pool; }
+MemoryPool* prealloc_memory_pool() { return &global_state.prealloc_pool_; }
 
 Status jemalloc_memory_pool(MemoryPool** out) {
 #ifdef ARROW_JEMALLOC
